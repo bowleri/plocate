@@ -60,6 +60,7 @@ int64_t limit_matches = numeric_limits<int64_t>::max();
 int64_t limit_left = numeric_limits<int64_t>::max();
 bool stdout_is_tty = false;
 bool literal_printing = false;
+int parent_pipe_fd = -1;
 static bool in_forked_child = false;
 
 steady_clock::time_point start;
@@ -720,6 +721,7 @@ uint64_t do_search_file_in_child(const vector<Needle> &needles, const std::strin
 		// Child.
 		close(pipefd[0]);
 		in_forked_child = true;
+		parent_pipe_fd = pipefd[1];
 		uint64_t matched = do_search_file(needles, filename);
 		int ret;
 		do {
@@ -1006,7 +1008,7 @@ int main(int argc, char **argv)
 	}
 
 	uint64_t matched = 0;
-	for (size_t i = 0; i < dbpaths.size(); ++i) {
+	for (size_t i = 0; i < dbpaths.size() && limit_left > 0; ++i) {
 		uint64_t this_matched;
 		if (i != dbpaths.size() - 1) {
 			this_matched = do_search_file_in_child(needles, dbpaths[i]);
@@ -1014,6 +1016,13 @@ int main(int argc, char **argv)
 			this_matched = do_search_file(needles, dbpaths[i]);
 		}
 		matched += this_matched;
+		if (static_cast<int64_t>(matched) >= limit_matches) {
+			// NOTE: matched > limit_matches will happen if a child hit the limit.
+			// (If do_search_file() hit a limit, we'll exit() before this.)
+			matched = limit_matches;
+			limit_left = 0;
+			break;
+		}
 		limit_left -= this_matched;
 	}
 	if (only_count) {

@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <utility>
 
 using namespace std;
@@ -21,6 +22,19 @@ void apply_limit()
 	}
 	dprintf("Done in %.1f ms, found %" PRId64 " matches.\n",
 	        1e3 * duration<float>(steady_clock::now() - start).count(), limit_matches);
+	if (parent_pipe_fd != -1) {
+		uint64_t matched = limit_matches;
+		int ret;
+		do {
+			ret = write(parent_pipe_fd, &matched, sizeof(matched));
+		} while (ret == -1 && errno == EINTR);
+		if (ret != sizeof(matched)) {
+			perror("write");
+			_exit(EXIT_FAILURE);
+		}
+		fflush(stdout);
+		_exit(EXIT_SUCCESS);
+	}
 	if (only_count) {
 		printf("%" PRId64 "\n", limit_matches);
 	}
