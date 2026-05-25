@@ -61,7 +61,7 @@ int64_t limit_left = numeric_limits<int64_t>::max();
 bool stdout_is_tty = false;
 bool literal_printing = false;
 int parent_pipe_fd = -1;
-static bool in_forked_child = false;
+static bool can_early_exit_if_no_matches = true;
 
 steady_clock::time_point start;
 ZSTD_DDict *ddict = nullptr;
@@ -570,8 +570,10 @@ uint64_t do_search_file(const vector<Needle> &needles, const std::string &filena
 					// our count to the pipe), so we wait until we're back in to the
 					// regular (non-async) context. This is a fairly rare case anyway,
 					// and the gains from dropping the remaining trigram reads are limited.
+					// Similarly, if we have matches from an earlier database, we also
+					// drop this optimization.
 					if (td->remaining_trigrams_to_read == 0 && td->read_trigrams.empty()) {
-						if (in_forked_child) {
+						if (!can_early_exit_if_no_matches) {
 							should_early_exit = true;
 						} else {
 							dprintf("zero matches in %s, so we are done\n", print_td(*td).c_str());
@@ -720,7 +722,7 @@ uint64_t do_search_file_in_child(const vector<Needle> &needles, const std::strin
 	case 0: {
 		// Child.
 		close(pipefd[0]);
-		in_forked_child = true;
+		can_early_exit_if_no_matches = false;
 		parent_pipe_fd = pipefd[1];
 		uint64_t matched = do_search_file(needles, filename);
 		int ret;
@@ -1012,6 +1014,11 @@ int main(int argc, char **argv)
 		uint64_t this_matched;
 		if (i != dbpaths.size() - 1) {
 			this_matched = do_search_file_in_child(needles, dbpaths[i]);
+			if (this_matched != 0) {
+				// We need to report these matches even if the last database
+				// has none.
+				can_early_exit_if_no_matches = false;
+			}
 		} else {
 			this_matched = do_search_file(needles, dbpaths[i]);
 		}
