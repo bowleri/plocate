@@ -482,8 +482,8 @@ uint64_t do_search_file(const vector<Needle> &needles, const std::string &filena
 	}
 
 	// Drop privileges.
-	if (setgid(getgid()) != 0) {
-		perror("setgid");
+	if (setresgid(getgid(), getgid(), getgid()) != 0) {
+		perror("setresgid");
 		exit(EXIT_FAILURE);
 	}
 
@@ -951,8 +951,8 @@ int main(int argc, char **argv)
 		// from making plocate slow for everyone else.
 		// --ignore-visibility is obvious; if we allowed to keep sgid with
 		// that flag on, it would subvert the entire security model.
-		if (setgid(getgid()) != 0) {
-			perror("setgid");
+		if (setresgid(getgid(), getgid(), getgid()) != 0) {
+			perror("setresgid");
 			exit(EXIT_FAILURE);
 		}
 	}
