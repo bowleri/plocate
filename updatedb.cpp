@@ -94,9 +94,9 @@ int opendir_noatime(int dirfd, const char *path)
 
 	if (!noatime_failed) {
 #ifdef O_NOATIME
-		int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOATIME);
+		int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOATIME | O_NOFOLLOW);
 #else
-		int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY);
+		int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
 #endif
 		if (fd != -1) {
 			return fd;
