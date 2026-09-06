@@ -1,3 +1,15 @@
+plocate 1.1.25, September 6th, 2026
+
+  - Fix two early-exit bugs with multiple databases.
+    Reported by Manpreet Singh and Tyler Spivey.
+
+  - Drop setgid properly, including the saved gid.
+    Reported by Michal Sekletar, found with the help of Claude Opus 4.6.
+
+  - Fix a potential symlink-checking race in updatedb.
+    Reported by Michal Sekletar, found with the help of Claude Opus 4.6.
+
+
 plocate 1.1.24, January 13th, 2026
 
   - Improve error handling on synchronous reads. Reported by
